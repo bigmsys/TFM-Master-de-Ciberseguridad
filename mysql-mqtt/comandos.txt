@@ -1,0 +1,43 @@
+apt install mysql-server-8.0 python3-dev python3-pip python3.12-venv pkg-config default-libmysqlclient-dev build-essential
+
+mkdir python
+cd python/
+python3 -m venv .venv
+source .venv/bin/activate
+
+pip3 install mysqlclient bcrypt pyotp
+
+# Cambiar la ip de salida de localhost a la LAN
+vim /etc/mysql/mysql.conf.d/mysqld.cnf
+
+# Creación de la base de datos y la tabla
+CREATE DATABASE mqtt_auth;
+USE mqtt_auth;
+CREATE TABLE users (
+  username VARCHAR(100) PRIMARY KEY,
+  password VARCHAR(100),
+  totp_secret VARCHAR(100)
+);
+
+# Creación de usuario mqtt en la base de datos y grants.
+CREATE USER 'mqtt'@'%' IDENTIFIED BY '12qwert5';
+GRANT ALL PRIVILEGES ON mqtt_auth.* TO 'mqtt'@'%';
+FLUSH PRIVILEGES;
+
+systemctl restart mysql.service
+
+# Script de creación de usuario con contraseña hasheada con bcrypt
+
+vim crear_usuario.py
+
+# Archivo de configuración con datos de conexion a la BBDD
+vim config.ini
+chmod 600 config.ini
+
+# Ejecución del script
+root@mysql-mqtt:~/python# ./crear_usuario.py
+Usuario: iotclient01
+Contraseña: 12qwert5
+Usuario creado: iotclient01
+Secreto TOTP: WS4CXP7MUNHEHQK2CZYMR65Z5KWTCM3G
+root@mysql-mqtt:~/python#

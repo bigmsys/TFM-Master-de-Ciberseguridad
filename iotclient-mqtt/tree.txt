@@ -1,0 +1,6 @@
+ .
+├── certs
+│   └── ca.crt
+└── python
+    ├── config.ini
+    ├── enviar_metricas.py

@@ -1,0 +1,17 @@
+apt update
+apt install python3.12-venv
+
+mkdir -p {python,certs}
+cd python
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install paho-mqtt pyotp
+
+vim enviar_metricas.py
+chmod u+x enviar_metricas.py
+
+vim config.ini
+chmod 600 config.ini
+
+./enviar_metricas.py

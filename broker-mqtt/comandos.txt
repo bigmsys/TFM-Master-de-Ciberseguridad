@@ -1,0 +1,51 @@
+ 
+apt update
+apt install -y mosquitto mosquitto-clients libmysqlclient-dev  build-essential gcc libc6-dev libssl-dev pkg-config make
+
+systemctl enable mosquitto
+systemctl start mosquitto
+
+wget https://raw.githubusercontent.com/eclipse-mosquitto/mosquitto/v2.0.18/include/mosquitto_broker.h
+wget https://raw.githubusercontent.com/eclipse-mosquitto/mosquitto/v2.0.18/include/mosquitto_plugin.h
+mv mosquitto_* /usr/include/
+
+wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+tar -C /usr/local/ -xzf go1.24.0.linux-amd64.tar.gz
+rm go1.24.0.linux-amd64.tar.gz
+
+git clone https://github.com/iegomez/mosquitto-go-auth.git
+cd mosquitto-go-auth/
+make
+
+mkdir /etc/mosquitto/go-auth/
+cp go-auth.so /etc/mosquitto/go-auth/
+
+cd /etc/mosquitto/certs
+chown -R $USER:$USER .
+chmod 700 .
+openssl genrsa -out ca.key 4096
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt   -subj "/C=ES/ST=Madrid/L=Madrid/O=CampusdeCiberseguridad/CN=TFM-ISAACM."
+openssl genrsa -out server.key 4096
+openssl req -new -key server.key -out server.csr   -subj "/C=ES/ST=Madrid/L=Madrid/O=CampusdeCiberseguridad/CN=broker.mosquitto"
+
+cat > server.ext << EOF
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage=digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName=DNS:broker.mosquitto,DNS:localhost,IP:127.0.0.1
+EOF
+
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial   -out server.crt -days 365 -sha256 -extfile server.ext
+chown -R mosquitto:mosquitto /etc/mosquitto/certs
+chmod 600 /etc/mosquitto/certs/*
+chmod 644 /etc/mosquitto/certs/ca.crt /etc/mosquitto/certs/server.crt
+openssl x509 -in ca.crt -text -noout
+openssl x509 -in server.crt -text -noout
+openssl verify -CAfile ca.crt server.crt
+
+vim /etc/mosquitto/conf.d/auth.conf
+vim /etc/mosquitto/conf.d/default_listeners.conf
+
+systemctl restart mosquitto
+journalctl -u mosquitto -f
+systemctl status mosquitto
