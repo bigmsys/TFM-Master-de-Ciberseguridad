@@ -1,5 +1,5 @@
  
-apt update
+apt update -y
 apt install -y mosquitto mosquitto-clients libmysqlclient-dev  build-essential gcc libc6-dev libssl-dev pkg-config make
 
 systemctl enable mosquitto
