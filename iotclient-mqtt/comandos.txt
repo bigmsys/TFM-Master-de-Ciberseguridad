@@ -1,5 +1,5 @@
-apt update
-apt install python3.12-venv
+apt update -y
+apt install python3.12-venv -y
 
 mkdir -p {python,certs}
 cd python
