@@ -1,5 +1,5 @@
-apt install python3 python3-pip python3-venv libmysqlclient-dev pkg-config python3-dev default-libmysqlclient-dev build-essential
--y
+apt update -y
+apt install python3 python3-pip python3-venv libmysqlclient-dev pkg-config python3-dev default-libmysqlclient-dev build-essential -y
 
 mkdir -p ~/python/auth/{acl,user,superuser}
 cd python/
