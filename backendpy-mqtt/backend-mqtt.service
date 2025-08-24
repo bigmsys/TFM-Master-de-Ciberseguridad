@@ -1,0 +1,12 @@
+[Unit]
+Description=Backend Flask para autenticación MQTT
+After=network.target mysql.service
+
+[Service]
+ExecStart=/root/python/.venv/bin/python /root/python/app.py
+WorkingDirectory=/root/python
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
