@@ -1,4 +1,4 @@
-# /etc/systemd/system/backend-mqtt.service
+# Ubicación: /etc/systemd/system/backend-mqtt.service
 
 [Unit]
 Description=Backend Flask para autenticación MQTT
