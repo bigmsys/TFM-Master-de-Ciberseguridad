@@ -1,23 +1,24 @@
- 
-apt update -y
-apt install -y mosquitto mosquitto-clients libmysqlclient-dev  build-essential gcc libc6-dev libssl-dev pkg-config make
+apt update
+apt install -y mosquitto mosquitto-clients libmysqlclient-dev libmosquitto-dev build-essential gcc libc6-dev libssl-dev pkg-config make
 
 systemctl enable mosquitto
 systemctl start mosquitto
 
 wget https://raw.githubusercontent.com/eclipse-mosquitto/mosquitto/v2.0.18/include/mosquitto_broker.h
 wget https://raw.githubusercontent.com/eclipse-mosquitto/mosquitto/v2.0.18/include/mosquitto_plugin.h
-mv mosquitto_* /usr/include/
+mv mosquitto* /usr/include/
 
 wget https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
 tar -C /usr/local/ -xzf go1.24.0.linux-amd64.tar.gz
 rm go1.24.0.linux-amd64.tar.gz
 
+export PATH=$PATH:/usr/local/go/bin
+
 git clone https://github.com/iegomez/mosquitto-go-auth.git
 cd mosquitto-go-auth/
 make
 
-mkdir /etc/mosquitto/go-auth/
+mkdir -p /etc/mosquitto/go-auth/
 cp go-auth.so /etc/mosquitto/go-auth/
 
 cd /etc/mosquitto/certs

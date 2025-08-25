@@ -1,4 +1,4 @@
-apt update -y
+apt update
 apt install python3.12-venv -y
 
 mkdir -p {python,certs}
@@ -10,6 +10,8 @@ pip install paho-mqtt pyotp
 
 vim enviar_metricas.py
 chmod u+x enviar_metricas.py
+
+echo "192.168.122.154 broker.mosquitto" >> /etc/hosts
 
 vim config.ini
 chmod 600 config.ini

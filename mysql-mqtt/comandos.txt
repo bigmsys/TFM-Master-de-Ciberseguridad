@@ -1,4 +1,4 @@
-apt update -y
+apt update
 apt install mysql-server-8.0 python3-dev python3-pip python3.12-venv pkg-config default-libmysqlclient-dev build-essential -y
 
 mkdir python
@@ -10,7 +10,8 @@ pip3 install mysqlclient bcrypt pyotp
 
 # Cambiar la ip de salida de localhost a la LAN
 vim /etc/mysql/mysql.conf.d/mysqld.cnf
-
+        # Old/Default -> bind-address            = localhost
+        # New -> bind-address            = 192.168.122.72 # Tu IP
 # Creación de la base de datos y la tabla
 CREATE DATABASE mqtt_auth;
 USE mqtt_auth;

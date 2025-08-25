@@ -12,7 +12,7 @@ from paho.mqtt.packettypes import PacketTypes
 
 # Carga la configuración del archivo config.ini
 cfg = configparser.ConfigParser()
-cfg.read(os.environ.get("CLIENT_CFG", os.path.join(os.path.dirname(__file__), "config.ini")))
+cfg.read(os.environ.get("CLIENT_CFG", os.path.join(os.path.dirname(__file__), "/root/python/config.ini")))
 
 # Parámetros MQTT
 USER      = cfg["mqtt"]["user"]
@@ -68,6 +68,8 @@ cli.will_set(f"metrics/{USER}/Estado",
 
 # Se genera el TOTP
 set_creds(cli)
+
+# Asignación de callbacks: qué hacer al conectar y al confirmar publicación
 cli.on_connect=on_connect
 cli.on_publish=on_publish
 
