@@ -189,4 +189,11 @@ En el script, usa rutas absolutas para config.ini y ca.crt (cron no hereda tu en
 
 ## Licencia
 
-Este repositorio forma parte de un TFM. Ajusta la licencia según necesidades (MIT, Apache-2.0, etc.).
+Copyright (C) 2025 Tu Nombre
+
+Este proyecto se distribuye bajo los términos de la **GNU General Public License v3.0 (GPL-3.0)**.  
+Puedes redistribuirlo y/o modificarlo bajo dicha licencia publicada por la Free Software Foundation.  
+
+Este software se distribuye "tal cual", sin ninguna garantía, incluso sin la garantía implícita de **COMERCIABILIDAD** o **IDONEIDAD PARA UN PROPÓSITO PARTICULAR**.  
+Consulta el archivo [LICENSE](LICENSE) para más detalles o visita <https://www.gnu.org/licenses/gpl-3.0.html>.
+
