@@ -189,7 +189,7 @@ En el script, usa rutas absolutas para config.ini y ca.crt (cron no hereda tu en
 
 ## Licencia
 
-Copyright (C) 2025 Tu Nombre
+Copyright (C) 2025 bigmsys
 
 Este proyecto se distribuye bajo los términos de la **GNU General Public License v3.0 (GPL-3.0)**.  
 Puedes redistribuirlo y/o modificarlo bajo dicha licencia publicada por la Free Software Foundation.  
