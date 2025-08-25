@@ -11,10 +11,6 @@ Implementación de un broker **Mosquitto** securizado con:
 
 [Cliente IoT] --TLS/8883--> [Mosquitto + go-auth] --HTTP--> [Flask Backend] --SQL--> [MySQL]
 
-yaml
-Copiar
-Editar
-
 - **Mosquitto** con plugin **mosquitto-go-auth** (backend **HTTP**).
 - **Backend Flask** valida `user|OTP` + contraseña base contra **MySQL**.
 - **ACL**: cada usuario sólo puede publicar en `metrics/<user>/{Temperatura,Humedad,Estado}` y leer `metrics/<user>/#`.
@@ -52,24 +48,24 @@ subjectAltName=DNS:broker.mosquitto,IP:192.168.122.154,IP:127.0.0.1
 EOF
 
 # Firma del cert del broker
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -out server.crt -days 365 -sha256 -extfile server.ext
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial   -out server.crt -days 365 -sha256 -extfile server.ext
+```
+
 En los clientes sólo se distribuye ca.crt.
 
 Verificación rápida:
 
-bash
-Copiar
-Editar
+```bash
 openssl x509 -in ca.crt -text -noout
 openssl x509 -in server.crt -text -noout
 openssl verify -CAfile ca.crt server.crt
-Mosquitto
-/etc/mosquitto/conf.d/default_listeners.conf
+```
 
-c
-Copiar
-Editar
+### Mosquitto
+
+`/etc/mosquitto/conf.d/default_listeners.conf`
+
+```conf
 listener 8883 0.0.0.0
 protocol mqtt
 cafile  /etc/mosquitto/certs/ca.crt
@@ -77,11 +73,11 @@ certfile /etc/mosquitto/certs/server.crt
 keyfile  /etc/mosquitto/certs/server.key
 tls_version tlsv1.2
 allow_anonymous false
-/etc/mosquitto/conf.d/auth.conf
+```
 
-conf
-Copiar
-Editar
+`/etc/mosquitto/conf.d/auth.conf`
+
+```conf
 # --- Plugin + backend HTTP ---
 auth_plugin /etc/mosquitto/go-auth/go-auth.so
 auth_opt_backends http
@@ -100,48 +96,50 @@ auth_opt_http_aclcheck_uri  /auth/acl
 # --- Logging (sube a info en prod) ---
 auth_opt_log_level debug
 auth_opt_log_dest stdout
-Si usas hostname del broker, añade en clientes:
-echo "192.168.122.154 broker.mosquitto" | sudo tee -a /etc/hosts
+```
 
-Backend (Flask + MySQL)
+Si usas hostname del broker, añade en clientes:
+```bash
+echo "192.168.122.154 broker.mosquitto" | sudo tee -a /etc/hosts
+```
+
+---
+
+## Backend (Flask + MySQL)
+
 Estructura:
 
-arduino
-Copiar
-Editar
+```
 backendpy-mqtt/
   app.py
   config.ini
   requirements.txt
-config.ini
+```
 
-ini
-Copiar
-Editar
+`config.ini`
+
+```ini
 [mysql]
 host = 192.168.122.72
 user = mqtt
 password = 12qwert5
 database = mqtt_auth
-app.py (resumen de endpoints):
+```
 
-POST /auth/user → valida username="user|OTP" + password="base" (bcrypt + TOTP).
+### app.py (resumen de endpoints):
 
-POST /auth/acl → 1=read, 2=write, 4=subscribe.
+- `POST /auth/user` → valida username="user|OTP" + password="base" (bcrypt + TOTP).
+- `POST /auth/acl` → 1=read, 2=write, 4=subscribe.  
+  WRITE permitido: metrics/<user>/{Temperatura,Humedad,Estado}  
+  READ/SUB permitido: metrics/<user>/#  
+  Deniega $SYS/#
+- `POST /auth/superuser` → siempre `{"Ok": false}` (sin superusuarios).
 
-WRITE permitido: metrics/<user>/{Temperatura,Humedad,Estado}
+### Arranque con systemd
 
-READ/SUB permitido: metrics/<user>/#
+`/etc/systemd/system/backend-mqtt.service`
 
-Deniega $SYS/#
-
-POST /auth/superuser → siempre {"Ok": false} (sin superusuarios).
-
-Arranque con systemd (/etc/systemd/system/backend-mqtt.service)
-
-ini
-Copiar
-Editar
+```ini
 [Unit]
 Description=Backend Flask MQTT Auth
 After=network.target mysql.service
@@ -154,37 +152,43 @@ User=root
 
 [Install]
 WantedBy=multi-user.target
-bash
-Copiar
-Editar
+```
+
+```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now backend-mqtt
 sudo systemctl status backend-mqtt
-Base de datos
+```
+
+---
+
+## Base de datos
+
 Tabla mínima users:
 
-sql
-Copiar
-Editar
+```sql
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(64) UNIQUE NOT NULL,
   password VARCHAR(100) NOT NULL, -- bcrypt
   totp_secret VARCHAR(64) NOT NULL
 );
-Alta de usuario (crear_usuario.py) genera bcrypt + totp_secret:
+```
 
-bash
-Copiar
-Editar
+Alta de usuario (`crear_usuario.py`) genera bcrypt + totp_secret:
+
+```bash
 chmod 600 config.ini  # proteger credenciales
 ./crear_usuario.py
-Cliente de métricas (Python)
-config.ini (cliente)
+```
 
-ini
-Copiar
-Editar
+---
+
+## Cliente de métricas (Python)
+
+`config.ini` (cliente)
+
+```ini
 [mqtt]
 user = iotclient01
 password = 12qwert5
@@ -197,68 +201,67 @@ topic_hum  = metrics/%(user)s/Humedad
 
 [tls]
 ca_certs = /root/certs/ca.crt
-Puntos clave del cliente:
+```
 
-TLS con ca.crt
+### Puntos clave del cliente:
 
-username = user|OTP (TOTP), password = base
+- TLS con ca.crt  
+- username = user|OTP (TOTP), password = base  
+- Publica Temperatura y Humedad (QoS 1)  
+- LWT en metrics/<user>/Estado (ej. unsafe_disconnection)  
+- SessionExpiryInterval=0 (sesión efímera, MQTT v5)  
+- Se desconecta tras recibir los PUBACK  
 
-Publica Temperatura y Humedad (QoS 1)
+### Prueba rápida de suscripción:
 
-LWT en metrics/<user>/Estado (ej. unsafe_disconnection)
-
-SessionExpiryInterval=0 (sesión efímera, MQTT v5)
-
-Se desconecta tras recibir los PUBACK
-
-Prueba rápida de suscripción:
-
-bash
-Copiar
-Editar
+```bash
 OTP=$(python3 - <<'PY'
 import pyotp; print(pyotp.TOTP("WS4CXP7MUNHEHQK2CZYMR65Z5KWTCM3G").now())
 PY)
-mosquitto_sub -h broker.mosquitto -p 8883 --cafile /root/certs/ca.crt \
-  -u "iotclient01|$OTP" -P "12qwert5" -t 'metrics/iotclient01/#' -v -d
-Publicación de ejemplo:
+mosquitto_sub -h broker.mosquitto -p 8883 --cafile /root/certs/ca.crt   -u "iotclient01|$OTP" -P "12qwert5" -t 'metrics/iotclient01/#' -v -d
+```
 
-bash
-Copiar
-Editar
+### Publicación de ejemplo:
+
+```bash
 OTP=$(python3 - <<'PY'
 import pyotp; print(pyotp.TOTP("WS4CXP7MUNHEHQK2CZYMR65Z5KWTCM3G").now())
 PY)
-mosquitto_pub -h broker.mosquitto -p 8883 --cafile /root/certs/ca.crt \
-  -u "iotclient01|$OTP" -P "12qwert5" \
-  -t "metrics/iotclient01/Temperatura" -m '{"value":22.5}'
-Cron (opcional)
-bash
-Copiar
-Editar
+mosquitto_pub -h broker.mosquitto -p 8883 --cafile /root/certs/ca.crt   -u "iotclient01|$OTP" -P "12qwert5"   -t "metrics/iotclient01/Temperatura" -m '{"value":22.5}'
+```
+
+---
+
+## Cron (opcional)
+
+```bash
 crontab -e
 * * * * * /root/python/.venv/bin/python /root/python/enviar_metricas.py >/dev/null 2>&1
+```
+
 En el script, usa rutas absolutas para config.ini y ca.crt (cron no hereda tu entorno).
 
-Seguridad y buenas prácticas
-Tiempo: NTP activo en todas las máquinas (TOTP depende del reloj).
+---
 
-Usuarios: un usuario por dispositivo y ClientId fijo; deshabilitar cuentas no usadas.
+## Seguridad y buenas prácticas
 
-ACL: mínimo privilegio; bloquear $SYS/#.
+- Tiempo: NTP activo en todas las máquinas (TOTP depende del reloj).
+- Usuarios: un usuario por dispositivo y ClientId fijo; deshabilitar cuentas no usadas.
+- ACL: mínimo privilegio; bloquear $SYS/#.
+- TLS: SAN correcto en server.crt; rotación periódica; clientes confían sólo en CA.
+- Backend: responder 200 con {"Ok": false} en denegaciones (no 401); systemd con Restart=always.
+- Archivos sensibles: chmod 600 config.ini.
 
-TLS: SAN correcto en server.crt; rotación periódica; clientes confían sólo en CA.
+---
 
-Backend: responder 200 con {"Ok": false} en denegaciones (no 401); systemd con Restart=always.
+## Troubleshooting
 
-Archivos sensibles: chmod 600 config.ini.
+- error code: 401 en go-auth → OTP caducado o backend devolviendo 401. Devuelve 200 {"Ok":false} para denegar sin “api error”.
+- No ves métricas con cron → rutas relativas/hostname sin resolver/venv distinto. Usa IP o /etc/hosts y rutas absolutas.
+- Cert no válido → revisa subjectAltName y que el cliente use el hostname correcto.
 
-Troubleshooting
-error code: 401 en go-auth → OTP caducado o backend devolviendo 401. Devuelve 200 {"Ok":false} para denegar sin “api error”.
+---
 
-No ves métricas con cron → rutas relativas/hostname sin resolver/venv distinto. Usa IP o /etc/hosts y rutas absolutas.
+## Licencia
 
-Cert no válido → revisa subjectAltName y que el cliente use el hostname correcto.
-
-Licencia
 Este repositorio forma parte de un TFM. Ajusta la licencia según necesidades (MIT, Apache-2.0, etc.).
