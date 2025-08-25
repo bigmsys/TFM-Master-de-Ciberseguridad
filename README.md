@@ -61,43 +61,6 @@ openssl x509 -in server.crt -text -noout
 openssl verify -CAfile ca.crt server.crt
 ```
 
-### Mosquitto
-
-`/etc/mosquitto/conf.d/default_listeners.conf`
-
-```conf
-listener 8883 0.0.0.0
-protocol mqtt
-cafile  /etc/mosquitto/certs/ca.crt
-certfile /etc/mosquitto/certs/server.crt
-keyfile  /etc/mosquitto/certs/server.key
-tls_version tlsv1.2
-allow_anonymous false
-```
-
-`/etc/mosquitto/conf.d/auth.conf`
-
-```conf
-# --- Plugin + backend HTTP ---
-auth_plugin /etc/mosquitto/go-auth/go-auth.so
-auth_opt_backends http
-allow_anonymous false
-
-# --- HTTP → Flask ---
-auth_opt_http_host 192.168.122.99
-auth_opt_http_port 3000
-auth_opt_http_response_mode json
-auth_opt_http_params_mode   json
-auth_opt_http_method        POST
-auth_opt_http_getuser_uri   /auth/user
-auth_opt_http_superuser_uri /auth/superuser
-auth_opt_http_aclcheck_uri  /auth/acl
-
-# --- Logging (sube a info en prod) ---
-auth_opt_log_level debug
-auth_opt_log_dest stdout
-```
-
 Si usas hostname del broker, añade en clientes:
 ```bash
 echo "192.168.122.154 broker.mosquitto" | sudo tee -a /etc/hosts
@@ -106,26 +69,6 @@ echo "192.168.122.154 broker.mosquitto" | sudo tee -a /etc/hosts
 ---
 
 ## Backend (Flask + MySQL)
-
-Estructura:
-
-```
-backendpy-mqtt/
-  app.py
-  config.ini
-  requirements.txt
-```
-
-`config.ini`
-
-```ini
-[mysql]
-host = 192.168.122.72
-user = mqtt
-password = 12qwert5
-database = mqtt_auth
-```
-
 ### app.py (resumen de endpoints):
 
 - `POST /auth/user` → valida username="user|OTP" + password="base" (bcrypt + TOTP).
@@ -185,24 +128,6 @@ chmod 600 config.ini  # proteger credenciales
 ---
 
 ## Cliente de métricas (Python)
-
-`config.ini` (cliente)
-
-```ini
-[mqtt]
-user = iotclient01
-password = 12qwert5
-secret = WS4CXP7MUNHEHQK2CZYMR65Z5KWTCM3G
-broker = broker.mosquitto
-port = 8883
-client_id = iotclient01-metric
-topic_temp = metrics/%(user)s/Temperatura
-topic_hum  = metrics/%(user)s/Humedad
-
-[tls]
-ca_certs = /root/certs/ca.crt
-```
-
 ### Puntos clave del cliente:
 
 - TLS con ca.crt  
@@ -232,7 +157,7 @@ mosquitto_pub -h broker.mosquitto -p 8883 --cafile /root/certs/ca.crt   -u "iotc
 
 ---
 
-## Cron (opcional)
+## Cron
 
 ```bash
 crontab -e
